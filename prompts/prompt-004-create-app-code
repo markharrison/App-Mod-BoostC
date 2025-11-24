@@ -2,7 +2,7 @@ Create an asp.net razor pages c sharp code base that has the functionality found
 legacy_screenshots folder. 
 
 make sure the index page for the user interface has buttons or links to be able ot perform all the sensible database operations to add and read data 
-as well as any filters to change the listed data
+as well as any filters to change the listed data.
 
 use a clean modern user interface like this one:
 https://cdn.dribbble.com/userupload/4279134/file/original-5e630140a5ad559268aaf9fd3650b403.png?resize=2048x1536&vertical=center
