@@ -9,3 +9,9 @@ The DefaultAzureCredential in the code needs to know which managed identity to u
 Setting AZURE_CLIENT_ID tells DefaultAzureCredential to use the specific managed identity with that client ID
 This allows the ChatService to authenticate with Azure OpenAI using the managed identity
 Without this setting, you got the error: "Unable to load the proper Managed Identity" because DefaultAzureCredential couldn't determine which identity to use.
+
+Pass the App Service's managed identity to the GenAI module:
+- In main.bicep, pass appService.outputs.managedIdentityPrincipalId to the genai module
+- In genai.bicep, accept managedIdentityPrincipalId as a parameter
+- Use this principal ID for role assignments to Azure OpenAI and Cognitive Search
+- Do not create a new managed identity in genai.bicep
