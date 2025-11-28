@@ -6,9 +6,17 @@ There are two distinct deployment phases, each with its own automated PowerShell
 
 Run the infrastructure deployment script:
 
-    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp" -Location "eastus2"
+    .\deploy-infra\deploy.ps1 -ResourceGroup "rg-yourapp-YYYYMMDD" -Location "uksouth"
+
+Important: Always use a unique resource group name (include date/time suffix). Reusing resource groups with partially deployed resources can cause ARM caching issues, particularly with Log Analytics Workspace references that result in "Could not retrieve the Log Analytics workspace from ARM" errors.
 
 This script handles everything automatically: Azure CLI validation, credential retrieval, resource group creation, Bicep deployment, SQL Server configuration, firewall rules, database schema import, stored procedures, managed identity permissions, and App Service settings.
+
+**Critical: The infrastructure deployment script MUST configure the App Service with:**
+- `ConnectionStrings__DefaultConnection` - The SQL connection string with Managed Identity authentication
+- `AZURE_CLIENT_ID` - The user-assigned managed identity client ID
+
+Without these settings, the application will fail to connect to the database with errors like "System.InvalidOperationException: A relational store has been configured without specifying either the DbConnection or connection string to use."
 
 At the end, the script saves a deployment context file (.deployment-context.json) containing all the resource names and configuration values needed for the next phase.
 
@@ -23,6 +31,14 @@ The script automatically reads the deployment context file created by the infras
 ### Seamless Deployment Flow
 
 The two scripts are designed to work together without manual parameter entry between them. The deployment context file passes resource names and configuration values from infrastructure deployment to application deployment automatically.
+
+### Known Issues and Workarounds
+
+1. VS Code integrated terminal may use cached PATH: If sqlcmd produces errors about unrecognized arguments, the terminal may be using the legacy ODBC sqlcmd instead of modern go-sqlcmd. Either restart VS Code or run from a standalone PowerShell terminal.
+
+2. PowerShell argument parsing: The --authentication-method argument must be quoted in PowerShell scripts to prevent parsing errors.
+
+3. Resource group reuse: Always use fresh resource group names. If a deployment fails partway through, delete the resource group before retrying.
 
 ### Bicep Guidelines
 

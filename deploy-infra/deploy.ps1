@@ -219,7 +219,7 @@ if (-not $SkipDatabaseSetup) {
         if ($sqlcmdPath) {
             Write-Info "Using sqlcmd..."
             try {
-                sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -i $schemaFile
+                sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i $schemaFile
                 Write-Success "Database schema imported"
             } catch {
                 Write-Warning "sqlcmd failed, this might be expected if schema already exists"
@@ -238,19 +238,19 @@ if (-not $SkipDatabaseSetup) {
         
         try {
             # Drop user if exists, then recreate
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault `
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" `
                 -Q "IF EXISTS (SELECT * FROM sys.database_principals WHERE name = '$managedIdentityName') DROP USER [$managedIdentityName];"
             
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault `
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" `
                 -Q "CREATE USER [$managedIdentityName] FROM EXTERNAL PROVIDER;"
             
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault `
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" `
                 -Q "ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];"
             
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault `
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" `
                 -Q "ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];"
             
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault `
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" `
                 -Q "GRANT EXECUTE TO [$managedIdentityName];"
             
             Write-Success "Managed identity database roles configured"
@@ -270,7 +270,7 @@ if (-not $SkipDatabaseSetup) {
     } elseif ($sqlcmdPath) {
         Write-Info "Stored procedures file: $storedProcsFile"
         try {
-            sqlcmd -S $serverFqdn -d "Northwind" --authentication-method=ActiveDirectoryDefault -i $storedProcsFile
+            sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=ActiveDirectoryDefault" -i $storedProcsFile
             Write-Success "Stored procedures created"
         } catch {
             Write-Warning "Failed to create stored procedures"
@@ -286,9 +286,14 @@ if (-not $SkipDatabaseSetup) {
 # Configure App Service
 Write-Step "Configuring App Service settings"
 
-# Build settings array
+# Build connection string for SQL Database with Managed Identity
+$sqlConnectionString = "Server=tcp:$sqlServerName.database.windows.net,1433;Initial Catalog=Northwind;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=Active Directory Managed Identity;User Id=$managedIdentityClientId;"
+
+# Build settings array - always include connection string and client ID
 $settings = @(
-    "APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString"
+    "APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString",
+    "AZURE_CLIENT_ID=$managedIdentityClientId",
+    "ConnectionStrings__DefaultConnection=$sqlConnectionString"
 )
 
 if ($DeployGenAI -and $openAIEndpoint) {
