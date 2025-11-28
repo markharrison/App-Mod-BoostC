@@ -41,7 +41,6 @@ module azureSQL 'modules/azure-sql.bicep' = {
     baseName: baseName
     adminObjectId: adminObjectId
     adminLogin: adminLogin
-    managedIdentityPrincipalId: managedIdentity.outputs.managedIdentityPrincipalId
   }
 }
 
@@ -91,15 +90,15 @@ output managedIdentityClientId string = managedIdentity.outputs.managedIdentityC
 @description('The managed identity principal ID')
 output managedIdentityPrincipalId string = managedIdentity.outputs.managedIdentityPrincipalId
 
-// GenAI outputs (conditional)
+// GenAI outputs (conditional) - use null-safe operators to avoid BCP318 warnings
 @description('The Azure OpenAI endpoint')
-output openAIEndpoint string = deployGenAI ? genAI.outputs.openAIEndpoint : ''
+output openAIEndpoint string = genAI.?outputs.?openAIEndpoint ?? ''
 
 @description('The Azure OpenAI model deployment name')
-output openAIModelName string = deployGenAI ? genAI.outputs.openAIModelName : ''
+output openAIModelName string = genAI.?outputs.?openAIModelName ?? ''
 
 @description('The Azure AI Search endpoint')
-output searchEndpoint string = deployGenAI ? genAI.outputs.searchEndpoint : ''
+output searchEndpoint string = genAI.?outputs.?searchEndpoint ?? ''
 
 // Monitoring outputs
 @description('The Log Analytics Workspace ID')

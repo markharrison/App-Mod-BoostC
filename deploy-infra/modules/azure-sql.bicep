@@ -10,9 +10,6 @@ param adminObjectId string
 @description('The login name (UPN) of the Azure AD administrator')
 param adminLogin string
 
-@description('Principal ID of the managed identity for database access')
-param managedIdentityPrincipalId string
-
 // Create unique but deterministic names using resource group id
 var uniqueSuffix = uniqueString(resourceGroup().id)
 var sqlServerName = toLower('sql-${baseName}-${uniqueSuffix}')

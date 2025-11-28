@@ -1,31 +1,33 @@
 ## Infrastructure vs Application Deployment Separation
 
-There are TWO distinct deployment phases. Document these in separate README files.
+There are two distinct deployment phases that should be documented in separate README files.
 
-### Phase 1: Infrastructure Deployment (deploy-infra/README.md)
+### Phase 1: Infrastructure Deployment
 
-Follow this deployment order including the 30 second wait to ensure each step has the resource before it ready:
+Use the automated deployment script (deploy-infra/deploy.ps1) which handles everything:
 
-1. Set PowerShell variables for all required values
-2. Create or select the resource group
-3. Deploy Bicep template: `az deployment group create --resource-group $resourceGroup --template-file ./deploy-infra/main.bicep --parameters @./deploy-infra/parameters.json`
-4. Wait 30 seconds for SQL Server to be fully ready
-5. Add IP for the local user's machine to the firewall
-6. Import the database schema using `az sql db query`
-7. Configure database roles for the managed identity
+1. Validates Azure CLI login and retrieves user credentials automatically
+2. Creates the resource group
+3. Deploys all Bicep templates
+4. Waits for SQL Server to be ready
+5. Configures firewall rules
+6. Imports database schema and stored procedures
+7. Sets up managed identity with database permissions
+8. Configures App Service settings
 
-### Phase 2: Application Deployment (deploy-app/README.md)
+Alternatively, manual steps are documented in deploy-infra/README.md.
 
-This is completely separate and assumes infrastructure already exists:
+### Phase 2: Application Deployment
 
-1. Set PowerShell variables (resourceGroup, webAppName)
-2. Create the application zip file
-3. Deploy using `az webapp deploy`
+This is completely separate and assumes infrastructure already exists. See deploy-app/README.md for instructions on building and deploying the application code.
 
 ### Bicep Guidelines
 
-Use uniqueString(resourceGroup().id) to make the resources unique and do not use timestamps such as utcNow for uniqueness.
+Use uniqueString(resourceGroup().id) to generate deterministic unique names for resources. Never use timestamps like utcNow() in variable declarations as this is not allowed in Bicep.
 
-Also bear in mind these items:
+Key considerations for Bicep templates:
 
-The Bicep deployment was failing due to several issues: First, the utcNow() function was being used in a variable declaration in app-service.bicep, which isn't allowed - it can only be used as a parameter default value, so I switched to static naming instead. Second, the main.bicep file was missing the adminObjectId and adminLogin parameters that the deployment script was trying to pass for SQL Server Entra ID authentication, and these weren't being forwarded to the azure-sql module. Third, the deployment script had incorrect syntax trying to pass azure-sql.bicep as a parameter rather than passing the actual parameter values to the main template. Fourth, the conditional GenAI module outputs needed null-safe operators (?. and ??) to prevent errors when the module isn't deployed. Finally, azure-sql.bicep was missing the managedIdentityPrincipalId parameter declaration that main.bicep was trying to pass. These fixes ensure proper parameter flow, deterministic resource naming, and safe handling of conditional resources.
+- The utcNow() function can only be used as a parameter default value, not in variable declarations
+- Conditional module outputs must use null-safe operators (?. and ??) to prevent errors when optional modules are not deployed
+- All resource names should be lowercase to comply with Azure naming requirements
+- Do not configure diagnostic settings at the SQL Server level as categories like SQLSecurityAuditEvents are not supported - only configure diagnostics at the database level

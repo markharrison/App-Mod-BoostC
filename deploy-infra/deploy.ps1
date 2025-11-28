@@ -55,7 +55,15 @@ param(
     [switch]$SkipDatabaseSetup
 )
 
-$ErrorActionPreference = "Stop"
+# Set error preference - but we'll handle az CLI errors manually to allow warnings
+$ErrorActionPreference = "Continue"
+
+# Check PowerShell version and warn if using older version
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "[WARNING] You are running PowerShell $($PSVersionTable.PSVersion). PowerShell 7+ is recommended." -ForegroundColor Yellow
+    Write-Host "          Install with: winget install Microsoft.PowerShell" -ForegroundColor Yellow
+    Write-Host ""
+}
 
 # Colors for output
 function Write-Step { param($Message) Write-Host "`n==> $Message" -ForegroundColor Cyan }
@@ -120,7 +128,8 @@ if (-not (Test-Path $bicepFile)) {
 Write-Info "Deploying from: $bicepFile"
 Write-Info "This may take several minutes..."
 
-$deploymentResult = az deployment group create `
+# Run deployment
+az deployment group create `
     --resource-group $ResourceGroup `
     --template-file $bicepFile `
     --parameters location=$Location `
@@ -128,11 +137,10 @@ $deploymentResult = az deployment group create `
     --parameters adminObjectId=$adminObjectId `
     --parameters adminLogin=$adminLogin `
     --parameters deployGenAI=$deployGenAIValue `
-    --output json 2>&1
+    --output none
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Infrastructure deployment failed"
-    Write-Host $deploymentResult -ForegroundColor Red
     exit 1
 }
 
@@ -192,7 +200,7 @@ if (-not $SkipDatabaseSetup) {
 
     # Find the database schema file
     $repoRoot = Split-Path -Parent $scriptDir
-    $schemaFile = Join-Path $repoRoot "Database-Schema" "database_schema.sql"
+    $schemaFile = Join-Path (Join-Path $repoRoot "Database-Schema") "database_schema.sql"
     $storedProcsFile = Join-Path $repoRoot "stored-procedures.sql"
 
     $serverFqdn = "$sqlServerName.database.windows.net"

@@ -1,23 +1,16 @@
-Use sqlcmd (SQL Server command-line tool) to configure managed identity database roles.
-Do NOT use Python scripts for SQL execution.
+Use sqlcmd to configure the managed identity as a database user with the appropriate roles.
 
-Add the following commands to deploy-infra/README.md for Step 7 (Configure Database Roles for Managed Identity):
+Do not use Python scripts for SQL execution. The deployment script (deploy.ps1) handles this automatically.
 
-```powershell
-$managedIdentityName = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.managedIdentityName.value" -o tsv)
-$sqlServerName = (az deployment group show --resource-group $resourceGroup --name main --query "properties.outputs.sqlServerName.value" -o tsv)
+The managed identity needs the following database permissions:
+- db_datareader role for reading data
+- db_datawriter role for writing data  
+- EXECUTE permission for calling stored procedures
 
-# Create the managed identity user and grant roles using sqlcmd with Azure AD auth
-sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -G -Q "IF EXISTS (SELECT * FROM sys.database_principals WHERE name = '$managedIdentityName') BEGIN DROP USER [$managedIdentityName]; END"
-sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -G -Q "CREATE USER [$managedIdentityName] FROM EXTERNAL PROVIDER;"
-sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -G -Q "ALTER ROLE db_datareader ADD MEMBER [$managedIdentityName];"
-sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -G -Q "ALTER ROLE db_datawriter ADD MEMBER [$managedIdentityName];"
-sqlcmd -S "$sqlServerName.database.windows.net" -d "Northwind" -G -Q "GRANT EXECUTE TO [$managedIdentityName];"
-```
+The database user is created using CREATE USER FROM EXTERNAL PROVIDER which links the Azure managed identity to a database principal.
 
-The -G flag enables Azure Active Directory authentication using the currently logged-in Azure CLI credentials.
-The -Q flag executes a single query and exits.
+For manual execution, use sqlcmd with --authentication-method=ActiveDirectoryDefault for Entra ID authentication. The older -G flag is deprecated in the modern go-sqlcmd tool.
 
-Do NOT create script.sql files that require sed substitution - use PowerShell variable expansion directly in the sqlcmd commands instead.
+Use PowerShell variable expansion directly in sqlcmd commands rather than creating separate SQL script files that require text substitution.
 
 

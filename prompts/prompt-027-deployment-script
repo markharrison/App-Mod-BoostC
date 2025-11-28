@@ -1,35 +1,23 @@
-Create a PowerShell deployment script in the deploy-infra folder that automates the complete infrastructure deployment process. The script should be named deploy.ps1 and handle the following:
+Create a PowerShell deployment script called deploy.ps1 in the deploy-infra folder that fully automates the infrastructure deployment.
 
-Parameters:
-- ResourceGroup (required): Name of the Azure resource group
-- Location (required): Azure region for deployment
-- BaseName (optional, default "expensemgmt"): Prefix for resource naming
-- DeployGenAI (switch): Flag to deploy Azure OpenAI and AI Search resources
-- SkipDatabaseSetup (switch): Flag to skip database configuration steps for redeployments
+The script should accept parameters for the resource group name (required), Azure region (required), a base name for resources (optional, defaults to "expensemgmt"), a switch to deploy GenAI resources like Azure OpenAI and AI Search, and a switch to skip database setup for redeployments.
 
-The script should perform these steps in order:
+The deployment process should:
 
-1. Validate prerequisites - check Azure CLI is installed and user is logged in
-2. Get the current user's Azure AD Object ID and User Principal Name automatically
-3. Create the resource group if it doesn't exist
-4. Deploy infrastructure via Bicep using the main.bicep template
-5. Retrieve deployment outputs (SQL server name, web app name, managed identity, etc.)
-6. Wait 30 seconds for SQL Server to be ready
-7. Add the current machine's IP to the SQL Server firewall
-8. Import the database schema from Database-Schema/database_schema.sql using sqlcmd with ActiveDirectoryDefault authentication
-9. Configure managed identity database roles (db_datareader, db_datawriter, EXECUTE permission)
-10. Create stored procedures from stored-procedures.sql
-11. Configure App Service settings including Application Insights connection string
-12. If GenAI is deployed, also configure OpenAI endpoint, deployment name, Search endpoint, and ManagedIdentityClientId
+1. Check that Azure CLI is installed and the user is logged in
+2. Automatically retrieve the current user's Azure AD credentials (Object ID and User Principal Name)
+3. Create the resource group if needed
+4. Deploy all infrastructure using the Bicep templates
+5. Wait for SQL Server to become ready before proceeding
+6. Add the user's current IP address to the SQL Server firewall
+7. Import the database schema using sqlcmd with Entra ID authentication
+8. Create a database user for the managed identity and grant it read, write, and execute permissions
+9. Create the stored procedures required by the application
+10. Configure the App Service with connection strings and settings
+11. If GenAI resources were deployed, configure the OpenAI and Search endpoints
 
-The script should:
-- Use colored output with clear step indicators for progress tracking
-- Handle errors gracefully and provide meaningful error messages
-- Support idempotent execution where possible (check for existing resources)
-- Include comprehensive help documentation using PowerShell comment-based help
-- Print a summary of deployed resources at the end including the web app URL
+The script should provide clear progress indicators, handle errors gracefully, and display a summary of deployed resources at the end.
 
-Example usage:
-- Basic deployment: .\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth"
-- With GenAI: .\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth" -DeployGenAI
-- Redeployment: .\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth" -SkipDatabaseSetup
+Important: Use sqlcmd with the --authentication-method=ActiveDirectoryDefault flag for all database operations. The script should warn users if they're running PowerShell 5.1 and recommend upgrading to PowerShell 7+.
+
+Prerequisites: Azure CLI, sqlcmd (install with winget install sqlcmd), and PowerShell 7+ recommended.

@@ -32,6 +32,7 @@ The script automatically:
 1. Azure CLI installed and logged in (`az login`)
 2. Appropriate Azure subscription permissions
 3. sqlcmd installed (`winget install sqlcmd`)
+4. PowerShell 7+ recommended (`winget install Microsoft.PowerShell`) - script works with PowerShell 5.1 but 7+ is preferred
 
 ## Manual Deployment Steps
 

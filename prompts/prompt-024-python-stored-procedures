@@ -1,34 +1,16 @@
-if the database_schema.sql file has stored procedures contained in it then use those to update the code 
-as the way the app will get data in and out of the database so the app has no T-SQL in the app and hence does not connect 
-to tables in the database directly.
+The application should access all data through stored procedures rather than direct SQL queries in the application code. This provides better security, performance, and maintainability.
 
-if the database_schema.sql file does not have any stored procedures then create a file called stored-procedures.sql and write the code to create all the 
-stored procedures needed to get data in and out of the database
-such that all app code uses stored procedures and not direct SQL in the app code.
-update the app code if needed to achieve that.
+If the database_schema.sql file already contains stored procedures, use those. Otherwise, create a stored-procedures.sql file containing all the stored procedures needed for the application's data access.
 
-make sure to use "CREATE OR ALTER PROCEDURE" in case the stored procedires already exist.
+Key requirements for stored procedures:
 
-make sure the app code does not call any stored procedure names that do not exist in the stored-procedures.sql file to avoid hallucinations that 
-would crash the app.
+- Use CREATE OR ALTER PROCEDURE syntax so the script can be run multiple times without errors
+- Ensure every stored procedure called by the application code exists in the stored-procedures.sql file
+- The application code should never construct dynamic SQL or access tables directly
 
-changing the server and database variables at the top to those created earlier in the process.
-If you were not asked to create them then leave them as is.
+The deployment script (deploy.ps1) automatically imports the stored procedures using sqlcmd with Entra ID authentication. For manual execution, use sqlcmd with --authentication-method=ActiveDirectoryDefault.
 
-bear in mind making it work on Mac as well,
-
-also update the deploy.sh file to add this:
-
-# Install required Python packages if not already installed
-pip3 install --quiet pyodbc azure-identity
-
-# Run the Python script
-python3 run-sql-stored-procs.py
-
-Python file contents:
-
-#!/usr/bin/env python3
-"""
+Do not use Python scripts for executing SQL against the database. The sqlcmd tool handles GO batch separators natively and is the recommended approach for all database script execution.
 Execute SQL script on Azure SQL Database using Azure Active Directory authentication
 """
 import pyodbc
