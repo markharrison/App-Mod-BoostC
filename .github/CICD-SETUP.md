@@ -10,14 +10,14 @@ This guide explains how to configure GitHub Actions for fully automated deployme
 
 ## Step 1: Create Service Principal with OIDC Federation
 
-Run these commands from a terminal (Azure CLI):
+Run these commands from a **PowerShell** terminal:
 
-```bash
+```powershell
 # Set variables
-GITHUB_ORG="your-github-username-or-org"
-GITHUB_REPO="App-Mod-Boost"
-SUBSCRIPTION_ID="your-azure-subscription-id"
-APP_NAME="sp-expense-mgmt-cicd"
+$GITHUB_ORG = "your-github-username-or-org"
+$GITHUB_REPO = "App-Mod-Boost"
+$SUBSCRIPTION_ID = "your-azure-subscription-id"
+$APP_NAME = "sp-expense-mgmt-cicd"
 
 # Login to Azure
 az login
@@ -26,50 +26,38 @@ az login
 az ad app create --display-name $APP_NAME
 
 # Get the Application (Client) ID
-APP_ID=$(az ad app list --display-name $APP_NAME --query "[0].appId" -o tsv)
+$APP_ID = az ad app list --display-name $APP_NAME --query "[0].appId" -o tsv
 
 # Create Service Principal for the application
 az ad sp create --id $APP_ID
 
 # Get the Service Principal Object ID (needed for SQL admin)
-SP_OBJECT_ID=$(az ad sp show --id $APP_ID --query "id" -o tsv)
+$SP_OBJECT_ID = az ad sp show --id $APP_ID --query "id" -o tsv
 
 # Assign Contributor role to the subscription
-az role assignment create \
-    --assignee $APP_ID \
-    --role "Contributor" \
+az role assignment create `
+    --assignee $APP_ID `
+    --role "Contributor" `
     --scope "/subscriptions/$SUBSCRIPTION_ID"
 
-# Create federated credential for GitHub Actions
-# For the main branch:
-az ad app federated-credential create \
-    --id $APP_ID \
-    --parameters '{
-        "name": "github-actions-main",
-        "issuer": "https://token.actions.githubusercontent.com",
-        "subject": "repo:'"$GITHUB_ORG"'/'"$GITHUB_REPO"':ref:refs/heads/main",
-        "audiences": ["api://AzureADTokenExchange"]
-    }'
+# Create federated credential for GitHub Actions - main branch
+az ad app federated-credential create --id $APP_ID --parameters '{\"name\":\"github-actions-main\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:chrisdoofer/App-Mod-Boost:ref:refs/heads/main\",\"audiences\":[\"api://AzureADTokenExchange\"]}'
 
-# For production environment (used by workflow):
-az ad app federated-credential create \
-    --id $APP_ID \
-    --parameters '{
-        "name": "github-actions-production",
-        "issuer": "https://token.actions.githubusercontent.com",
-        "subject": "repo:'"$GITHUB_ORG"'/'"$GITHUB_REPO"':environment:production",
-        "audiences": ["api://AzureADTokenExchange"]
-    }'
+# Create federated credential for GitHub Actions - production environment
+az ad app federated-credential create --id $APP_ID --parameters '{\"name\":\"github-actions-production\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:chrisdoofer/App-Mod-Boost:environment:production\",\"audiences\":[\"api://AzureADTokenExchange\"]}'
+
+# Get Tenant ID
+$TENANT_ID = az account show --query tenantId -o tsv
 
 # Output the values you need for GitHub
-echo ""
-echo "============================================"
-echo "Add these as GitHub Repository Variables:"
-echo "============================================"
-echo "AZURE_CLIENT_ID: $APP_ID"
-echo "AZURE_TENANT_ID: $(az account show --query tenantId -o tsv)"
-echo "AZURE_SUBSCRIPTION_ID: $SUBSCRIPTION_ID"
-echo ""
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Green
+Write-Host "Add these as GitHub Repository Variables:" -ForegroundColor Green
+Write-Host "============================================" -ForegroundColor Green
+Write-Host "AZURE_CLIENT_ID:       $APP_ID"
+Write-Host "AZURE_TENANT_ID:       $TENANT_ID"
+Write-Host "AZURE_SUBSCRIPTION_ID: $SUBSCRIPTION_ID"
+Write-Host ""
 ```
 
 ## Step 2: Configure GitHub Repository
