@@ -40,6 +40,12 @@ az role assignment create `
     --role "Contributor" `
     --scope "/subscriptions/$SUBSCRIPTION_ID"
 
+# Assign User Access Administrator role (needed to create role assignments for Managed Identity)
+az role assignment create `
+    --assignee $APP_ID `
+    --role "User Access Administrator" `
+    --scope "/subscriptions/$SUBSCRIPTION_ID"
+
 # Create federated credential for GitHub Actions - main branch
 az ad app federated-credential create --id $APP_ID --parameters '{\"name\":\"github-actions-main\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:chrisdoofer/App-Mod-Boost:ref:refs/heads/main\",\"audiences\":[\"api://AzureADTokenExchange\"]}'
 
