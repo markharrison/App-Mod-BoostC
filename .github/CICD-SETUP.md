@@ -136,11 +136,49 @@ The Service Principal needs to be set as the SQL Server Entra ID admin. This hap
 - The Service Principal has the correct Object ID
 - The `adminPrincipalType` is set to `Application` (not `User`)
 
-### sqlcmd connection fails
+### sqlcmd "Identity not found" or "incomplete environment variable configuration"
 
-In CI/CD, sqlcmd uses `ActiveDirectoryDefault` which picks up the OIDC token from the `azure/login` action. Ensure:
-- The `azure/login` action runs before any sqlcmd commands
-- The Service Principal has SQL admin rights on the server
+This happens when using `ActiveDirectoryDefault` in OIDC because it tries `EnvironmentCredential` first.
+
+**Solution:** Use `ActiveDirectoryAzCli` authentication in CI/CD:
+```powershell
+$authMethod = if ($IsCI) { "ActiveDirectoryAzCli" } else { "ActiveDirectoryDefault" }
+sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" -Q "SELECT 1"
+```
+
+### "Principal could not be resolved" when creating database user
+
+This error occurs when using `CREATE USER ... FROM EXTERNAL PROVIDER` because it requires the SQL Server to have a system-assigned managed identity with Directory Reader permissions in Entra ID.
+
+**Solution:** Use SID-based user creation instead:
+```powershell
+# Convert Client ID to SID
+$guidBytes = [System.Guid]::Parse($managedIdentityClientId).ToByteArray()
+$sidHex = "0x" + [System.BitConverter]::ToString($guidBytes).Replace("-", "")
+
+# Create user with SID (no Directory Reader required)
+sqlcmd -S $serverFqdn -d "Northwind" "--authentication-method=$authMethod" `
+    -Q "CREATE USER [$managedIdentityName] WITH SID = $sidHex, TYPE = E;"
+```
+
+### App deployment fails with "SCM container restart"
+
+This happens when deploying the app immediately after infrastructure deployment. The app settings update causes the SCM (deployment) container to restart.
+
+**Solution:** Add a 60-second delay before app deployment in the workflow:
+```yaml
+- name: Wait for App Service to stabilize
+  run: |
+    echo "Waiting 60 seconds for App Service settings to apply..."
+    sleep 60
+```
+
+### Role assignment failures in Bicep
+
+If Bicep includes role assignments (e.g., giving Managed Identity access to Azure OpenAI), you'll see:
+> "The client does not have permission to perform action 'Microsoft.Authorization/roleAssignments/write'"
+
+**Solution:** Ensure the Service Principal has both **Contributor** AND **User Access Administrator** roles at the subscription level.
 
 ## Local Development
 

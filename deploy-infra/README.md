@@ -2,6 +2,30 @@
 
 This folder contains the Bicep templates for deploying the Expense Management System infrastructure to Azure.
 
+## Deployment Options
+
+### Option 1: GitHub Actions (CI/CD) - Recommended for Production
+
+Fully automated deployment using OIDC federation (no secrets required). See `.github/CICD-SETUP.md` for setup instructions.
+
+```bash
+# Trigger via GitHub Actions UI or CLI
+gh workflow run deploy.yml -f resourceGroup="rg-expensemgmt-prod" -f location="uksouth"
+```
+
+### Option 2: Local Deployment - Recommended for Development
+
+```powershell
+# Basic deployment (without GenAI)
+.\deploy-infra\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth"
+
+# Deployment with Azure OpenAI and AI Search
+.\deploy-infra\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth" -DeployGenAI
+
+# Redeployment (skip database setup)
+.\deploy-infra\deploy.ps1 -ResourceGroup "rg-expensemgmt-demo" -Location "uksouth" -DeployGenAI -SkipDatabaseSetup
+```
+
 ## Quick Start - Automated Deployment
 
 The easiest way to deploy is using the automated deployment script:
