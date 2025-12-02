@@ -14,21 +14,28 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "GitHub Actions Azure OIDC Setup" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
+
 # Configuration
 $APP_NAME = $null
+$ENVIRONMENT = $null
 $envFile = Join-Path $PSScriptRoot "oidc-env.txt"
 if (Test-Path $envFile) {
     $envVars = Get-Content $envFile | Where-Object { $_ -match '=' }
     foreach ($line in $envVars) {
         $parts = $line -split '=', 2
         if ($parts[0] -eq 'APP_NAME') { $APP_NAME = $parts[1] }
+        if ($parts[0] -eq 'ENVIRONMENT') { $ENVIRONMENT = $parts[1] }
     }
+}
+
+# Prompt for ENVIRONMENT if not set
+while (-not $ENVIRONMENT) {
+    $ENVIRONMENT = Read-Host 'Enter environment name (e.g. production, staging)'
 }
 
 
 # Get repo from git remote, validate, and prompt if needed
 $gitRemote = git remote get-url origin 2>$null
-Write-Host "[DEBUG] git remote: $gitRemote" -ForegroundColor DarkGray
 $GITHUB_REPO = $null
 if ($gitRemote) {
     # Try to extract owner/repo from HTTPS URL
@@ -44,21 +51,12 @@ if ($gitRemote) {
         $GITHUB_REPO = $Matches[1]
     }
 }
-Write-Host "[DEBUG] Extracted GITHUB_REPO: $GITHUB_REPO" -ForegroundColor DarkGray
 # Validate format (should be owner/repo)
 while (-not $GITHUB_REPO -or $GITHUB_REPO -notmatch '^[^/]+/[^/]+$') {
     $GITHUB_REPO = Read-Host 'Enter GitHub repository (format: owner/repo, e.g. markharrison/App-Mod-BoostC)'
-    Write-Host "[DEBUG] User entered GITHUB_REPO: $GITHUB_REPO" -ForegroundColor DarkGray
 }
 
-# Get branch name from current branch or prompt
-$GITHUB_BRANCH = $null
-try {
-    $GITHUB_BRANCH = git rev-parse --abbrev-ref HEAD 2>$null
-} catch {}
-if (-not $GITHUB_BRANCH -or $GITHUB_BRANCH -eq 'HEAD') {
-    $GITHUB_BRANCH = Read-Host 'Enter branch name (e.g. main)'
-}
+
 
 # Prompt for APP_NAME if not set by file or environment
 while (-not $APP_NAME) {
@@ -92,23 +90,22 @@ if ($LASTEXITCODE -ne 0) { Write-Host "Service Principal may already exist" -For
 $OBJECT_ID = az ad sp list --display-name $APP_NAME --query [0].id -o tsv
 Write-Host "✓ Service Principal Object ID: $OBJECT_ID" -ForegroundColor Green
 
-# Add federated credential for specified branch
-Write-Host "" 
-Write-Host "Step 4: Adding federated credential for branch $GITHUB_BRANCH..." -ForegroundColor Yellow
+
+# Add federated credential for specified environment
+Write-Host ""
+Write-Host "Step 4: Adding federated credential for environment $ENVIRONMENT..." -ForegroundColor Yellow
 
 # Use a safe federated credential name (replace / with -)
-$safeBranch = $GITHUB_BRANCH -replace '[^a-zA-Z0-9_-]', '-'
-$credName = "gh-expensemgmt-$safeBranch"
+$safeEnv = $ENVIRONMENT -replace '[^a-zA-Z0-9_-]', '-'
+$credName = "gh-expensemgmt-env-$safeEnv"
 
-
-# Create JSON file with proper formatting for GitHub Actions OIDC
+# Create JSON file with proper formatting for GitHub Actions OIDC (Environment entity type)
 $GITHUB_REPO = "$GITHUB_REPO"  # Force as string
 if (-not $GITHUB_REPO -or $GITHUB_REPO -eq "") {
     Write-Host "[ERROR] GITHUB_REPO is empty. This should never happen." -ForegroundColor Red
     exit 1
 }
-$subject = "repo:$($GITHUB_REPO):ref:refs/heads/$GITHUB_BRANCH"
-Write-Host "[DEBUG] Federated credential subject: $subject" -ForegroundColor DarkGray
+$subject = "repo:$($GITHUB_REPO):environment:$ENVIRONMENT"
 $fedcred = @{
     name = $credName
     issuer = "https://token.actions.githubusercontent.com"
@@ -171,11 +168,13 @@ Write-Host "✓ Contributor role assigned" -ForegroundColor Green
 
 # Write values to a file for use by add-secrets and cleanup-oidc
 $envFile = Join-Path $PSScriptRoot "oidc-env.txt"
+
 @(
     "AZURE_CLIENT_ID=$APP_ID",
     "AZURE_TENANT_ID=$TENANT_ID",
     "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID",
-    "APP_NAME=$APP_NAME"
+    "APP_NAME=$APP_NAME",
+    "ENVIRONMENT=$ENVIRONMENT"
 ) | Set-Content -Path $envFile -Encoding utf8
 Write-Host "OIDC environment values written to $envFile" -ForegroundColor Green
 

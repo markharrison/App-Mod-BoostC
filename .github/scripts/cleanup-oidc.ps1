@@ -15,17 +15,20 @@ Write-Host "==========================================" -ForegroundColor Cyan
 
 # Configuration
 $APP_NAME = $null
+$ENVIRONMENT = $null
 
-# Read APP_NAME from oidc-env.txt if present, otherwise prompt
+# Read APP_NAME and ENVIRONMENT from oidc-env.txt if present, otherwise prompt
 $envFile = Join-Path $PSScriptRoot "oidc-env.txt"
 if (Test-Path $envFile) {
     $envVars = Get-Content $envFile | Where-Object { $_ -match '=' }
     foreach ($line in $envVars) {
         $parts = $line -split '=', 2
         if ($parts[0] -eq 'APP_NAME') { $APP_NAME = $parts[1] }
+        if ($parts[0] -eq 'ENVIRONMENT') { $ENVIRONMENT = $parts[1] }
     }
 }
 if (-not $APP_NAME) { $APP_NAME = Read-Host 'Enter APP_NAME' }
+if (-not $ENVIRONMENT) { $ENVIRONMENT = Read-Host 'Enter environment name (e.g. production, staging)' }
 
 # Get App ID
 Write-Host ""

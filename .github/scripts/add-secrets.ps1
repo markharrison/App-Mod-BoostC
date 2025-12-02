@@ -22,8 +22,10 @@ Write-Host ""
 $gitRemote = git remote get-url origin
 $GITHUB_REPO = $gitRemote -replace '^https://github.com/', '' -replace '\.git$', ''
 
+
 # Read values from oidc-env.txt if present, otherwise prompt for each value
 $envFile = Join-Path $PSScriptRoot "oidc-env.txt"
+$ENVIRONMENT = $null
 if (Test-Path $envFile) {
     $envVars = Get-Content $envFile | Where-Object { $_ -match '=' }
     foreach ($line in $envVars) {
@@ -35,6 +37,7 @@ if (Test-Path $envFile) {
             'AZURE_TENANT_ID' { $TenantId = $val }
             'AZURE_SUBSCRIPTION_ID' { $SubscriptionId = $val }
             'APP_NAME' { $AppName = $val }
+            'ENVIRONMENT' { $ENVIRONMENT = $val }
         }
     }
 }
@@ -42,6 +45,9 @@ if (-not $ClientId) { $ClientId = Read-Host 'Enter AZURE_CLIENT_ID' }
 if (-not $TenantId) { $TenantId = Read-Host 'Enter AZURE_TENANT_ID' }
 if (-not $SubscriptionId) { $SubscriptionId = Read-Host 'Enter AZURE_SUBSCRIPTION_ID' }
 if (-not $AppName) { $AppName = Read-Host 'Enter APP_NAME' }
+while (-not $ENVIRONMENT) {
+    $ENVIRONMENT = Read-Host 'Enter environment name (e.g. production, staging)'
+}
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "Add GitHub Secrets" -ForegroundColor Cyan
@@ -50,19 +56,18 @@ Write-Host ""
 Write-Host "Repository: $GITHUB_REPO" -ForegroundColor Gray
 Write-Host ""
 
-# Add AZURE_CLIENT_ID
-Write-Host "Adding AZURE_CLIENT_ID..." -ForegroundColor Yellow
-$ClientId | gh secret set AZURE_CLIENT_ID --repo $GITHUB_REPO
 
-# Add AZURE_TENANT_ID
-Write-Host ""
-Write-Host "Adding AZURE_TENANT_ID..." -ForegroundColor Yellow
-$TenantId | gh secret set AZURE_TENANT_ID --repo $GITHUB_REPO
+# Add secrets to the specified GitHub Environment
+Write-Host "Adding AZURE_CLIENT_ID to environment '$ENVIRONMENT'..." -ForegroundColor Yellow
+$ClientId | gh secret set AZURE_CLIENT_ID --repo $GITHUB_REPO --env "$ENVIRONMENT"
 
-# Add AZURE_SUBSCRIPTION_ID
 Write-Host ""
-Write-Host "Adding AZURE_SUBSCRIPTION_ID..." -ForegroundColor Yellow
-$SubscriptionId | gh secret set AZURE_SUBSCRIPTION_ID --repo $GITHUB_REPO
+Write-Host "Adding AZURE_TENANT_ID to environment '$ENVIRONMENT'..." -ForegroundColor Yellow
+$TenantId | gh secret set AZURE_TENANT_ID --repo $GITHUB_REPO --env "$ENVIRONMENT"
+
+Write-Host ""
+Write-Host "Adding AZURE_SUBSCRIPTION_ID to environment '$ENVIRONMENT'..." -ForegroundColor Yellow
+$SubscriptionId | gh secret set AZURE_SUBSCRIPTION_ID --repo $GITHUB_REPO --env "$ENVIRONMENT"
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
