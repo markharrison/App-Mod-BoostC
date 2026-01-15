@@ -44,7 +44,7 @@ permissions:
 jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: ${{ inputs.environment }}
     
     outputs:
@@ -91,7 +91,7 @@ jobs:
 
   deploy-application:
     name: Deploy Application
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: deploy-infrastructure
     environment: ${{ inputs.environment }}
     
@@ -130,5 +130,6 @@ jobs:
           echo "**Application URL:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/Index" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Swagger API:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/swagger" >> $GITHUB_STEP_SUMMARY
+
 
 
