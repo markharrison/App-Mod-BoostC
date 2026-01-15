@@ -68,7 +68,7 @@ jobs:
           sudo add-apt-repository "$(curl -sSL https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list)"
           sudo apt-get update
           sudo apt-get install -y sqlcmd
-          sqlcmd -V
+          sqlcmd -? || true
 
       - name: Deploy Infrastructure
         id: infra
@@ -130,6 +130,7 @@ jobs:
           echo "**Application URL:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/Index" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Swagger API:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/swagger" >> $GITHUB_STEP_SUMMARY
+
 
 
 
