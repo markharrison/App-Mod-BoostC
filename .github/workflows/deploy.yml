@@ -41,11 +41,6 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
 jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
@@ -63,9 +58,9 @@ jobs:
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Install go-sqlcmd
         run: |
@@ -135,3 +130,4 @@ jobs:
           echo "**Application URL:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/Index" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Swagger API:** https://${{ needs.deploy-infrastructure.outputs.webAppName }}.azurewebsites.net/swagger" >> $GITHUB_STEP_SUMMARY
+
